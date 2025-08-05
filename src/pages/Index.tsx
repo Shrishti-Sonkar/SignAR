@@ -6,6 +6,8 @@ import Avatar3D from '@/components/Avatar3D';
 import Navigation from '@/components/Navigation';
 import TranslationPanel from '@/components/TranslationPanel';
 import LearningStudio from '@/components/LearningStudio';
+import LearningResources from '@/components/LearningResources';
+import SettingsPanel from '@/components/SettingsPanel';
 import { 
   Sparkles, 
   Globe, 
@@ -56,6 +58,12 @@ const Index = () => {
         );
       case 'learn':
         return <LearningStudio onStartLesson={handleStartLesson} />;
+      case 'resources':
+        return <LearningResources onSelectResource={(resource) => {
+          setCurrentSign(`Learning: ${resource.title}`);
+          setIsAvatarAnimating(true);
+          setTimeout(() => setIsAvatarAnimating(false), 3000);
+        }} />;
       case 'speech':
         return (
           <Card className="p-6">
@@ -78,12 +86,10 @@ const Index = () => {
           </Card>
         );
       case 'settings':
-        return (
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Avatar Customization</h3>
-            <p className="text-muted-foreground">Avatar appearance and behavior settings coming soon!</p>
-          </Card>
-        );
+        return <SettingsPanel onSettingsChange={(settings) => {
+          console.log('Settings updated:', settings);
+          // Apply settings to avatar and UI
+        }} />;
       default:
         return null;
     }
@@ -122,7 +128,7 @@ const Index = () => {
     }
   ];
 
-  if (activeSection === 'translate' || activeSection === 'learn') {
+  if (activeSection === 'translate' || activeSection === 'learn' || activeSection === 'resources') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-signar-blue-light/20 to-background">
         <div className="container mx-auto px-4 py-6">

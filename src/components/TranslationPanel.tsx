@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Play, Square, RotateCcw, Volume2, MessageSquare } from 'lucide-react';
+import { Play, Square, RotateCcw, Volume2, MessageSquare, Sparkles, Zap } from 'lucide-react';
+import { TranslationService } from '@/services/aiServices';
 import { useToast } from '@/hooks/use-toast';
 
 interface TranslationPanelProps {
@@ -66,7 +67,7 @@ const TranslationPanel: React.FC<TranslationPanelProps> = ({
     return words.map(word => glossMap[word] || word.toUpperCase());
   };
 
-  const handleTranslate = () => {
+  const handleTranslate = async () => {
     if (!inputText.trim()) {
       toast({
         title: "Please enter text",
@@ -76,14 +77,27 @@ const TranslationPanel: React.FC<TranslationPanelProps> = ({
       return;
     }
 
-    const glosses = mockTranslateToGlosses(inputText);
-    setTranslatedGlosses(glosses);
-    onTranslate(inputText);
-    
-    toast({
-      title: "Translation complete",
-      description: `Translated "${inputText}" to ${glosses.length} sign(s)`,
-    });
+    try {
+      // Use AI-powered translation
+      const glosses = await TranslationService.translateToGlosses(inputText);
+      setTranslatedGlosses(glosses);
+      onTranslate(inputText);
+      
+      toast({
+        title: "AI Translation complete",
+        description: `Translated "${inputText}" to ${glosses.length} sign(s) using Groq AI`,
+      });
+    } catch (error) {
+      // Fallback to local translation
+      const glosses = mockTranslateToGlosses(inputText);
+      setTranslatedGlosses(glosses);
+      onTranslate(inputText);
+      
+      toast({
+        title: "Translation complete (offline)",
+        description: `Translated "${inputText}" to ${glosses.length} sign(s)`,
+      });
+    }
   };
 
   const handleSpeechToText = () => {
@@ -164,8 +178,8 @@ const TranslationPanel: React.FC<TranslationPanelProps> = ({
               onClick={handleTranslate}
               disabled={!inputText.trim()}
             >
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Translate to Signs
+              <Sparkles className="w-4 h-4 mr-2" />
+              AI Translate to Signs
             </Button>
             
             <Button 

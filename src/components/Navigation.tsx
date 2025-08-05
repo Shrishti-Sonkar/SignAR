@@ -19,6 +19,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeSection, onSectionChange 
   const navItems = [
     { id: 'translate', label: 'Translate', icon: MessageSquare },
     { id: 'learn', label: 'Learning Studio', icon: BookOpen },
+    { id: 'resources', label: 'Resources', icon: BookOpen },
     { id: 'speech', label: 'Speech Recognition', icon: Mic },
     { id: 'camera', label: 'Sign Recognition', icon: Camera },
     { id: 'ar', label: 'AR Mode', icon: Smartphone },
