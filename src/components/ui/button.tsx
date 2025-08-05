@@ -18,6 +18,9 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        signar: "bg-gradient-to-r from-signar-blue to-signar-teal text-white hover:opacity-90 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300",
+        "signar-outline": "border-2 border-signar-blue bg-transparent text-signar-blue hover:bg-signar-blue hover:text-white",
+        "signar-glass": "bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20",
       },
       size: {
         default: "h-10 px-4 py-2",

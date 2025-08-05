@@ -52,6 +52,14 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				signar: {
+					blue: 'hsl(var(--signar-blue))',
+					'blue-light': 'hsl(var(--signar-blue-light))',
+					'blue-dark': 'hsl(var(--signar-blue-dark))',
+					teal: 'hsl(var(--signar-teal))',
+					success: 'hsl(var(--signar-success))',
+					warning: 'hsl(var(--signar-warning))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
