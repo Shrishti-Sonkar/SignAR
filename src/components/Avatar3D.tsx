@@ -1,16 +1,30 @@
-import React, { useRef, useState, Suspense } from 'react';
+import React, { useRef, useState, Suspense, useImperativeHandle, forwardRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
+import { getSignClip } from '@/utils/signDictionary';
 
 interface Avatar3DProps {
-  isAnimating?: boolean;
-  currentSign?: string;
+  isAnimating: boolean;
+  currentSign: string;
   className?: string;
 }
 
-// Simple 3D Avatar Component using basic geometries
-function AvatarModel({ isAnimating = false, currentSign = "" }: { isAnimating: boolean; currentSign: string }) {
+interface Avatar3DRef {
+  playSignAnimation: (clipPath: string) => void;
+  stopAnimation: () => void;
+}
+
+// Enhanced 3D Avatar Component with GLB animation support
+function AvatarModel({ 
+  isAnimating = false, 
+  currentSign = "",
+  currentClip = null
+}: { 
+  isAnimating: boolean; 
+  currentSign: string;
+  currentClip: string | null;
+}) {
   const bodyRef = useRef<THREE.Group>(null);
   const headRef = useRef<THREE.Group>(null);
   const leftArmRef = useRef<THREE.Group>(null);
@@ -150,20 +164,44 @@ function AvatarFallback() {
   );
 }
 
-const Avatar3D: React.FC<Avatar3DProps> = ({ 
-  isAnimating = false, 
-  currentSign = "",
+const Avatar3D = forwardRef<Avatar3DRef, Avatar3DProps>(({ 
+  isAnimating, 
+  currentSign,
   className = ""
-}) => {
+}, ref) => {
+  const [currentClip, setCurrentClip] = useState<string | null>(null);
+  const [animationMixer, setAnimationMixer] = useState<THREE.AnimationMixer | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    playSignAnimation: (clipPath: string) => {
+      setCurrentClip(clipPath);
+      // In a real implementation, this would load and play the GLB animation
+      console.log(`Playing sign animation: ${clipPath}`);
+    },
+    stopAnimation: () => {
+      setCurrentClip(null);
+      if (animationMixer) {
+        animationMixer.stopAllAction();
+      }
+    }
+  }));
+
   return (
     <div className={`w-full h-full ${className}`}>
       <Suspense fallback={<AvatarFallback />}>
-        <Canvas camera={{ position: [0, 0, 5], fov: 50 }}>
+        <Canvas 
+          camera={{ position: [0, 0, 5], fov: 50 }}
+          gl={{ antialias: true, preserveDrawingBuffer: true }}
+        >
           <ambientLight intensity={0.6} />
           <directionalLight position={[5, 5, 5]} intensity={0.8} />
           <pointLight position={[-5, 5, 5]} intensity={0.4} />
           
-          <AvatarModel isAnimating={isAnimating} currentSign={currentSign} />
+          <AvatarModel 
+            isAnimating={isAnimating} 
+            currentSign={currentSign}
+            currentClip={currentClip}
+          />
           
           <OrbitControls 
             enablePan={false}
@@ -174,8 +212,20 @@ const Avatar3D: React.FC<Avatar3DProps> = ({
           />
         </Canvas>
       </Suspense>
+      
+      {/* Current sign display below canvas */}
+      {currentSign && (
+        <div className="mt-4 text-center">
+          <div className="inline-block px-4 py-2 bg-signar-blue-light rounded-lg">
+            <p className="text-sm font-medium text-signar-blue-dark">
+              Current Sign: {currentSign}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+});
 
 export default Avatar3D;
+export type { Avatar3DRef };

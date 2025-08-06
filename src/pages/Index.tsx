@@ -8,6 +8,7 @@ import TranslationPanel from '@/components/TranslationPanel';
 import LearningStudio from '@/components/LearningStudio';
 import LearningResources from '@/components/LearningResources';
 import SettingsPanel from '@/components/SettingsPanel';
+import SignLanguageFeature from '@/components/SignLanguageFeature';
 import { 
   Sparkles, 
   Globe, 
@@ -65,12 +66,7 @@ const Index = () => {
           setTimeout(() => setIsAvatarAnimating(false), 3000);
         }} />;
       case 'speech':
-        return (
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Speech Recognition</h3>
-            <p className="text-muted-foreground">Advanced speech-to-sign translation coming soon!</p>
-          </Card>
-        );
+        return <SignLanguageFeature />;
       case 'camera':
         return (
           <Card className="p-6">
