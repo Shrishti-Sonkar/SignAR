@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import Avatar3D from '@/components/Avatar3D';
+import ISLVideoPlayer, { ISLVideoPlayerHandle } from '@/components/ISLVideoPlayer';
 import Navigation from '@/components/Navigation';
 import TranslationPanel from '@/components/TranslationPanel';
 import LearningStudio from '@/components/LearningStudio';
@@ -20,30 +20,48 @@ import {
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('translate');
-  const [isAvatarAnimating, setIsAvatarAnimating] = useState(false);
-  const [currentSign, setCurrentSign] = useState('');
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [currentGlosses, setCurrentGlosses] = useState<string[]>([]);
+  const [currentText, setCurrentText] = useState('');
+  const videoPlayerRef = useRef<ISLVideoPlayerHandle>(null);
 
-  const handleTranslate = (text: string) => {
-    setCurrentSign(text);
-    // Auto-start animation when translation happens
-    setIsAvatarAnimating(true);
+  const handleTranslate = async (text: string, glosses: string[]) => {
+    setCurrentText(text);
+    setCurrentGlosses(glosses);
+    setIsVideoPlaying(true);
     
-    // Auto-stop after 5 seconds for demo
+    // Play the video sequence
+    if (videoPlayerRef.current) {
+      await videoPlayerRef.current.playSequence(glosses);
+    }
+    
+    // Update playing state after sequence
     setTimeout(() => {
-      setIsAvatarAnimating(false);
-    }, 5000);
+      setIsVideoPlaying(false);
+    }, glosses.length * 3000); // Estimate duration
   };
 
   const handleToggleAnimation = () => {
-    setIsAvatarAnimating(!isAvatarAnimating);
+    if (isVideoPlaying) {
+      videoPlayerRef.current?.stopSequence();
+      setIsVideoPlaying(false);
+    } else if (currentGlosses.length > 0) {
+      setIsVideoPlaying(true);
+      videoPlayerRef.current?.playSequence(currentGlosses);
+    }
   };
 
   const handleStartLesson = (lessonId: string) => {
-    setCurrentSign(`Learning: ${lessonId}`);
-    setIsAvatarAnimating(true);
+    setCurrentText(`Learning: ${lessonId}`);
+    setCurrentGlosses([lessonId.toUpperCase()]);
+    setIsVideoPlaying(true);
+    
+    if (videoPlayerRef.current) {
+      videoPlayerRef.current.playSequence([lessonId.toUpperCase()]);
+    }
     
     setTimeout(() => {
-      setIsAvatarAnimating(false);
+      setIsVideoPlaying(false);
     }, 3000);
   };
 
@@ -53,7 +71,7 @@ const Index = () => {
         return (
           <TranslationPanel
             onTranslate={handleTranslate}
-            isAnimating={isAvatarAnimating}
+            isAnimating={isVideoPlaying}
             onToggleAnimation={handleToggleAnimation}
           />
         );
@@ -61,9 +79,13 @@ const Index = () => {
         return <LearningStudio onStartLesson={handleStartLesson} />;
       case 'resources':
         return <LearningResources onSelectResource={(resource) => {
-          setCurrentSign(`Learning: ${resource.title}`);
-          setIsAvatarAnimating(true);
-          setTimeout(() => setIsAvatarAnimating(false), 3000);
+          setCurrentText(`Learning: ${resource.title}`);
+          setCurrentGlosses([resource.title.toUpperCase()]);
+          setIsVideoPlaying(true);
+          if (videoPlayerRef.current) {
+            videoPlayerRef.current.playSequence([resource.title.toUpperCase()]);
+          }
+          setTimeout(() => setIsVideoPlaying(false), 3000);
         }} />;
       case 'speech':
         return <SignLanguageFeature />;
@@ -99,8 +121,8 @@ const Index = () => {
     },
     {
       icon: <Sparkles className="w-6 h-6" />,
-      title: "3D Avatar",
-      description: "Expressive animated avatar with facial expressions"
+      title: "Video Signs",
+      description: "Real ISL sign videos for authentic learning"
     },
     {
       icon: <Zap className="w-6 h-6" />,
@@ -156,34 +178,38 @@ const Index = () => {
 
           {/* Main Content */}
           <div className="grid lg:grid-cols-2 gap-6">
-            {/* Left Panel - Avatar */}
-            <Card className="p-6 shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-              <div className="text-center mb-4">
-                <h3 className="text-lg font-semibold text-foreground">
-                  ISL Avatar
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {isAvatarAnimating ? 'Signing...' : 'Ready to sign'}
-                </p>
-              </div>
+            {/* Left Panel - ISL Video Player */}
+            <div className="space-y-4">
+              <ISLVideoPlayer 
+                ref={videoPlayerRef}
+                currentGlosses={currentGlosses}
+                isPlaying={isVideoPlaying}
+                className="w-full"
+              />
               
-              <div className="h-[500px] bg-gradient-to-b from-signar-blue-light/20 to-transparent rounded-lg">
-                <Avatar3D 
-                  isAnimating={isAvatarAnimating}
-                  currentSign={currentSign}
-                  className="w-full h-full"
-                />
-              </div>
-              
-              <div className="mt-4 text-center">
-                <Badge 
-                  variant={isAvatarAnimating ? "default" : "secondary"}
-                  className={isAvatarAnimating ? "bg-signar-success text-white" : ""}
-                >
-                  {isAvatarAnimating ? "Active" : "Standby"}
-                </Badge>
-              </div>
-            </Card>
+              <Card className="p-4 text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Badge 
+                    variant={isVideoPlaying ? "default" : "secondary"}
+                    className={isVideoPlaying ? "bg-green-500 text-white" : ""}
+                  >
+                    {isVideoPlaying ? "Playing" : "Ready"}
+                  </Badge>
+                </div>
+                
+                {currentText && (
+                  <p className="text-sm text-muted-foreground">
+                    Current: <span className="font-medium text-primary">{currentText}</span>
+                  </p>
+                )}
+                
+                {currentGlosses.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {currentGlosses.length} sign(s) in sequence
+                  </p>
+                )}
+              </Card>
+            </div>
 
             {/* Right Panel - Active Section */}
             <div className="space-y-6">

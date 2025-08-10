@@ -8,7 +8,7 @@ import { TranslationService } from '@/services/aiServices';
 import { useToast } from '@/hooks/use-toast';
 
 interface TranslationPanelProps {
-  onTranslate: (text: string) => void;
+  onTranslate: (text: string, glosses: string[]) => void;
   isAnimating: boolean;
   onToggleAnimation: () => void;
 }
@@ -81,7 +81,7 @@ const TranslationPanel: React.FC<TranslationPanelProps> = ({
       // Use AI-powered translation
       const glosses = await TranslationService.translateToGlosses(inputText);
       setTranslatedGlosses(glosses);
-      onTranslate(inputText);
+      onTranslate(inputText, glosses);
       
       toast({
         title: "AI Translation complete",
@@ -91,7 +91,7 @@ const TranslationPanel: React.FC<TranslationPanelProps> = ({
       // Fallback to local translation
       const glosses = mockTranslateToGlosses(inputText);
       setTranslatedGlosses(glosses);
-      onTranslate(inputText);
+      onTranslate(inputText, glosses);
       
       toast({
         title: "Translation complete (offline)",
