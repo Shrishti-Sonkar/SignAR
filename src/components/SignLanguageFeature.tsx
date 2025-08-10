@@ -9,13 +9,11 @@ import {
   Play, 
   Square, 
   RotateCcw, 
-  Volume2, 
   AlertCircle,
   Sparkles 
 } from 'lucide-react';
-import Avatar3D, { type Avatar3DRef } from '@/components/Avatar3D';
+import ISLVideoPlayer, { ISLVideoPlayerHandle } from '@/components/ISLVideoPlayer';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
-import { getSignClip, getSignClipsForSentence } from '@/utils/signDictionary';
 import { TranslationService } from '@/services/aiServices';
 import { useToast } from '@/hooks/use-toast';
 
@@ -24,14 +22,12 @@ interface SignLanguageFeatureProps {
 }
 
 const SignLanguageFeature: React.FC<SignLanguageFeatureProps> = ({ className = "" }) => {
-  const [currentGloss, setCurrentGloss] = useState<string>('');
-  const [isAnimating, setIsAnimating] = useState<boolean>(false);
-  const [signClips, setSignClips] = useState<Array<{ gloss: string; clipPath: string | null; duration: number }>>([]);
-  const [currentClipIndex, setCurrentClipIndex] = useState<number>(0);
+  const [currentText, setCurrentText] = useState<string>('');
+  const [currentGlosses, setCurrentGlosses] = useState<string[]>([]);
+  const [isVideoPlaying, setIsVideoPlaying] = useState<boolean>(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
   
-  const avatarRef = useRef<Avatar3DRef>(null);
-  const playbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const videoPlayerRef = useRef<ISLVideoPlayerHandle>(null);
   const { toast } = useToast();
 
   // Speech recognition hook
@@ -61,85 +57,63 @@ const SignLanguageFeature: React.FC<SignLanguageFeatureProps> = ({ className = "
     try {
       // Get AI-enhanced translation
       const glosses = await TranslationService.translateToGlosses(text);
-      const clips = getSignClipsForSentence(glosses.join(' '));
       
-      setSignClips(clips);
-      setCurrentGloss(text);
-      setCurrentClipIndex(0);
+      setCurrentGlosses(glosses);
+      setCurrentText(text);
 
       toast({
         title: "Translation Complete",
-        description: `Converted "${text}" to ${clips.length} sign(s)`,
+        description: `Converted "${text}" to ${glosses.length} sign(s)`,
       });
 
-      // Auto-play if we have valid clips
-      if (clips.some(clip => clip.clipPath)) {
-        playSignAnimation();
+      // Auto-play video sequence
+      if (glosses.length > 0 && videoPlayerRef.current) {
+        setIsVideoPlaying(true);
+        await videoPlayerRef.current.playSequence(glosses);
       }
     } catch (error) {
-      // Fallback to local dictionary
-      const clips = getSignClipsForSentence(text);
-      setSignClips(clips);
-      setCurrentGloss(text);
-      setCurrentClipIndex(0);
+      // Fallback to simple word splitting
+      const words = text.split(' ').filter(word => word.trim().length > 0);
+      const glosses = words.map(word => word.toUpperCase());
+      
+      setCurrentGlosses(glosses);
+      setCurrentText(text);
 
       toast({
         title: "Local Translation",
         description: `Using offline dictionary for "${text}"`
       });
+
+      // Auto-play video sequence
+      if (glosses.length > 0 && videoPlayerRef.current) {
+        setIsVideoPlaying(true);
+        await videoPlayerRef.current.playSequence(glosses);
+      }
     }
   }, [toast]);
 
-  // Play sign animation sequence
-  const playSignAnimation = useCallback(() => {
-    if (signClips.length === 0) {
+  // Play sign video sequence
+  const playSignVideoSequence = useCallback(async () => {
+    if (currentGlosses.length === 0) {
       toast({
         title: "No Signs Available",
-        description: "No sign animations found for the current text",
+        description: "No sign videos found for the current text",
         variant: "destructive"
       });
       return;
     }
 
-    setIsAnimating(true);
-    setCurrentClipIndex(0);
-    playNextClip(0);
-  }, [signClips, toast]);
-
-  // Play individual clip in sequence
-  const playNextClip = useCallback((index: number) => {
-    if (index >= signClips.length) {
-      setIsAnimating(false);
-      setCurrentClipIndex(0);
-      return;
+    setIsVideoPlaying(true);
+    if (videoPlayerRef.current) {
+      await videoPlayerRef.current.playSequence(currentGlosses);
     }
+  }, [currentGlosses, toast]);
 
-    const clip = signClips[index];
-    setCurrentClipIndex(index);
-
-    if (clip.clipPath && avatarRef.current) {
-      avatarRef.current.playSignAnimation(clip.clipPath);
-    }
-
-    // Schedule next clip
-    const duration = (clip.duration * 1000) / playbackSpeed;
-    playbackTimeoutRef.current = setTimeout(() => {
-      playNextClip(index + 1);
-    }, duration);
-  }, [signClips, playbackSpeed]);
-
-  // Stop animation
-  const stopAnimation = useCallback(() => {
-    setIsAnimating(false);
-    setCurrentClipIndex(0);
-    
-    if (playbackTimeoutRef.current) {
-      clearTimeout(playbackTimeoutRef.current);
-      playbackTimeoutRef.current = null;
-    }
-    
-    if (avatarRef.current) {
-      avatarRef.current.stopAnimation();
+  // Stop video playback
+  const stopVideoPlayback = useCallback(() => {
+    setIsVideoPlaying(false);
+    if (videoPlayerRef.current) {
+      videoPlayerRef.current.stopSequence();
     }
   }, []);
 
@@ -155,48 +129,31 @@ const SignLanguageFeature: React.FC<SignLanguageFeatureProps> = ({ className = "
 
   // Reset everything
   const resetAll = useCallback(() => {
-    stopAnimation();
+    stopVideoPlayback();
     resetTranscript();
-    setCurrentGloss('');
-    setSignClips([]);
-    setCurrentClipIndex(0);
-  }, [stopAnimation, resetTranscript]);
+    setCurrentText('');
+    setCurrentGlosses([]);
+    if (videoPlayerRef.current) {
+      videoPlayerRef.current.reset();
+    }
+  }, [stopVideoPlayback, resetTranscript]);
 
-  // Cleanup timeouts on unmount
-  useEffect(() => {
-    return () => {
-      if (playbackTimeoutRef.current) {
-        clearTimeout(playbackTimeoutRef.current);
-      }
-    };
+  // Handle video sequence completion
+  const handleSequenceComplete = useCallback(() => {
+    setIsVideoPlaying(false);
   }, []);
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Main Avatar Display */}
-      <Card className="p-6 shadow-xl bg-gradient-to-b from-white to-signar-blue-light/10">
-        <div className="text-center mb-4">
-          <h3 className="text-xl font-bold text-foreground mb-2">
-            SignAR™ 3D Avatar
-          </h3>
-          <Badge 
-            variant={isAnimating ? "default" : "secondary"}
-            className={isAnimating ? "bg-signar-success text-white animate-pulse" : ""}
-          >
-            {isAnimating ? `Signing (${currentClipIndex + 1}/${signClips.length})` : 'Ready'}
-          </Badge>
-        </div>
-
-        {/* 3D Avatar Container */}
-        <div className="h-[400px] bg-gradient-to-b from-signar-blue-light/20 to-transparent rounded-lg mb-4">
-          <Avatar3D
-            ref={avatarRef}
-            isAnimating={isAnimating}
-            currentSign={currentGloss}
-            className="w-full h-full"
-          />
-        </div>
-      </Card>
+      {/* Main ISL Video Player */}
+      <ISLVideoPlayer 
+        ref={videoPlayerRef}
+        currentGlosses={currentGlosses}
+        isPlaying={isVideoPlaying}
+        preloadVideos={true}
+        onSequenceComplete={handleSequenceComplete}
+        className="w-full"
+      />
 
       {/* Control Panel */}
       <Card className="p-6">
@@ -213,10 +170,10 @@ const SignLanguageFeature: React.FC<SignLanguageFeatureProps> = ({ className = "
             )}
           </div>
 
-          {/* Microphone Button */}
+          {/* Microphone and Control Buttons */}
           <div className="flex gap-3 flex-wrap">
             <Button
-              variant={isListening ? "destructive" : "signar"}
+              variant={isListening ? "destructive" : "default"}
               onClick={toggleMicrophone}
               disabled={!speechSupported}
               className="flex-1 sm:flex-none"
@@ -235,14 +192,14 @@ const SignLanguageFeature: React.FC<SignLanguageFeatureProps> = ({ className = "
             </Button>
 
             <Button
-              variant={isAnimating ? "destructive" : "secondary"}
-              onClick={isAnimating ? stopAnimation : playSignAnimation}
-              disabled={signClips.length === 0}
+              variant={isVideoPlaying ? "destructive" : "secondary"}
+              onClick={isVideoPlaying ? stopVideoPlayback : playSignVideoSequence}
+              disabled={currentGlosses.length === 0}
             >
-              {isAnimating ? (
+              {isVideoPlaying ? (
                 <>
                   <Square className="w-4 h-4 mr-2" />
-                  Stop
+                  Stop Videos
                 </>
               ) : (
                 <>
@@ -280,29 +237,17 @@ const SignLanguageFeature: React.FC<SignLanguageFeatureProps> = ({ className = "
                 </p>
               </div>
               
-              {signClips.length > 0 && (
+              {currentGlosses.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Sign Sequence:</p>
                   <div className="flex flex-wrap gap-2">
-                    {signClips.map((clip, index) => (
+                    {currentGlosses.map((gloss, index) => (
                       <Badge
                         key={index}
-                        variant={
-                          index === currentClipIndex && isAnimating 
-                            ? "default" 
-                            : clip.clipPath 
-                              ? "secondary" 
-                              : "outline"
-                        }
-                        className={
-                          index === currentClipIndex && isAnimating 
-                            ? "bg-signar-success text-white animate-pulse" 
-                            : clip.clipPath 
-                              ? "bg-signar-blue-light text-signar-blue-dark"
-                              : "text-muted-foreground"
-                        }
+                        variant="secondary"
+                        className="bg-primary/10 text-primary"
                       >
-                        {clip.gloss} {!clip.clipPath && "(missing)"}
+                        {gloss}
                       </Badge>
                     ))}
                   </div>
@@ -313,48 +258,40 @@ const SignLanguageFeature: React.FC<SignLanguageFeatureProps> = ({ className = "
         </Card>
       )}
 
-      {/* Playback Controls */}
-      {signClips.length > 0 && (
+      {/* Status Display */}
+      {currentText && (
         <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-sm font-medium">Playback Speed</p>
-              <div className="flex gap-2">
-                {[0.5, 0.75, 1.0, 1.25, 1.5].map((speed) => (
-                  <Button
-                    key={speed}
-                    variant={playbackSpeed === speed ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setPlaybackSpeed(speed)}
-                  >
-                    {speed}x
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">
-                {signClips.filter(clip => clip.clipPath).length} / {signClips.length} signs available
+          <div className="text-center">
+            <Badge 
+              variant={isVideoPlaying ? "default" : "secondary"}
+              className={isVideoPlaying ? "bg-green-500 text-white animate-pulse" : ""}
+            >
+              {isVideoPlaying ? "Playing Sign Videos" : "Ready"}
+            </Badge>
+            
+            <p className="text-sm text-muted-foreground mt-2">
+              Current: <span className="font-medium text-primary">{currentText}</span>
+            </p>
+            
+            {currentGlosses.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {currentGlosses.length} sign(s) in sequence
               </p>
-              <p className="text-xs text-muted-foreground">
-                Duration: ~{Math.round(signClips.reduce((sum, clip) => sum + clip.duration, 0) / playbackSpeed)}s
-              </p>
-            </div>
+            )}
           </div>
         </Card>
       )}
 
       {/* Accessibility Features */}
-      <Card className="p-4 bg-signar-blue-light/10">
+      <Card className="p-4 bg-primary/5">
         <div className="flex items-center gap-3">
-          <Sparkles className="w-5 h-5 text-signar-blue" />
+          <Sparkles className="w-5 h-5 text-primary" />
           <div>
             <h4 className="text-sm font-semibold text-foreground">
               Accessibility Features
             </h4>
             <p className="text-xs text-muted-foreground">
-              Voice-to-sign translation • Real-time captions • Replay controls • High contrast mode
+              Voice-to-sign translation • Real ISL videos • Replay controls • Preloaded for smooth playback
             </p>
           </div>
         </div>
