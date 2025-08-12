@@ -91,10 +91,22 @@ const Index = () => {
         return <SignLanguageFeature />;
       case 'camera':
         return (
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Sign Recognition</h3>
-            <p className="text-muted-foreground">Camera-based sign language recognition coming soon!</p>
-          </Card>
+          <div className="space-y-6">
+            {React.createElement(
+              React.lazy(() => import('@/components/SignRecognition')),
+              { 
+                onSignDetected: (sign: string, confidence: number) => {
+                  setCurrentText(`Detected: ${sign}`);
+                  setCurrentGlosses([sign.toUpperCase()]);
+                  setIsVideoPlaying(true);
+                  if (videoPlayerRef.current) {
+                    videoPlayerRef.current.playSequence([sign]);
+                  }
+                  setTimeout(() => setIsVideoPlaying(false), 3000);
+                }
+              }
+            )}
+          </div>
         );
       case 'ar':
         return (

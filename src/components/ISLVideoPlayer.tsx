@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Play, Pause, SkipForward, SkipBack, RotateCcw, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { SpeechProcessor } from '@/utils/speechProcessor';
 
 // Modular ISL Video Dataset Configuration
 export interface ISLVideoDataset {
@@ -13,38 +14,98 @@ export interface ISLVideoDataset {
   videos: Record<string, string>;
 }
 
-// Default ISL Video Dataset - easily swappable
+// Enhanced ISL Video Dataset - Modular and easily replaceable
 export const DEFAULT_ISL_DATASET: ISLVideoDataset = {
-  name: "Public ISL Dataset",
-  baseUrl: "https://assets.mixkit.co/videos/preview/",
+  name: "Local ISL Dataset",
+  baseUrl: "/videos/isl/",
   videos: {
-    // Basic greetings and common words
-    'HELLO': 'mixkit-hello-sign-language-gesture-44806-large.mp4',
-    'GOOD': 'mixkit-good-sign-language-gesture-44810-large.mp4',
-    'MORNING': 'mixkit-morning-sign-language-gesture-44815-large.mp4',
-    'DAY': 'mixkit-day-sign-language-gesture-44812-large.mp4',
-    'HAVE': 'mixkit-have-sign-language-gesture-44813-large.mp4',
-    'THANK': 'mixkit-thank-sign-language-gesture-44820-large.mp4',
-    'YOU': 'mixkit-you-sign-language-gesture-44825-large.mp4',
-    'PLEASE': 'mixkit-please-sign-language-gesture-44818-large.mp4',
-    'NICE': 'mixkit-nice-sign-language-gesture-44816-large.mp4',
-    'MEET': 'mixkit-meet-sign-language-gesture-44814-large.mp4',
-    'YES': 'mixkit-yes-sign-language-gesture-44826-large.mp4',
-    'NO': 'mixkit-no-sign-language-gesture-44817-large.mp4',
-    'HELP': 'mixkit-help-sign-language-gesture-44811-large.mp4',
-    'FAMILY': 'mixkit-family-sign-language-gesture-44809-large.mp4',
-    'MOTHER': 'mixkit-mother-sign-language-gesture-44821-large.mp4',
-    'FATHER': 'mixkit-father-sign-language-gesture-44822-large.mp4',
-    'GO': 'mixkit-go-sign-language-gesture-44823-large.mp4',
-    'COME': 'mixkit-come-sign-language-gesture-44824-large.mp4',
-    'EAT': 'mixkit-eat-sign-language-gesture-44807-large.mp4',
-    'DRINK': 'mixkit-drink-sign-language-gesture-44808-large.mp4',
-    // Numbers
-    'ONE': 'mixkit-one-sign-language-gesture-44827-large.mp4',
-    'TWO': 'mixkit-two-sign-language-gesture-44828-large.mp4',
-    'THREE': 'mixkit-three-sign-language-gesture-44829-large.mp4',
-    'FOUR': 'mixkit-four-sign-language-gesture-44830-large.mp4',
-    'FIVE': 'mixkit-five-sign-language-gesture-44831-large.mp4',
+    // Greetings and basics
+    'hello': 'hello.mp4',
+    'hi': 'hello.mp4',
+    'good': 'good.mp4',
+    'morning': 'morning.mp4',
+    'evening': 'evening.mp4',
+    'night': 'night.mp4',
+    'day': 'day.mp4',
+    'thank': 'thank.mp4',
+    'you': 'you.mp4',
+    'please': 'please.mp4',
+    'welcome': 'welcome.mp4',
+    'sorry': 'sorry.mp4',
+    
+    // Questions and responses  
+    'how': 'how.mp4',
+    'what': 'what.mp4',
+    'where': 'where.mp4',
+    'when': 'when.mp4',
+    'why': 'why.mp4',
+    'who': 'who.mp4',
+    'yes': 'yes.mp4',
+    'no': 'no.mp4',
+    
+    // Personal and family
+    'i': 'i.mp4',
+    'my': 'my.mp4',
+    'your': 'your.mp4',
+    'name': 'name.mp4',
+    'is': 'is.mp4',
+    'am': 'am.mp4',
+    'are': 'are.mp4',
+    
+    // Common verbs
+    'have': 'have.mp4',
+    'go': 'go.mp4',
+    'come': 'come.mp4',
+    'see': 'see.mp4',
+    'know': 'know.mp4',
+    'want': 'want.mp4',
+    'need': 'need.mp4',
+    'help': 'help.mp4',
+    'eat': 'eat.mp4',
+    'drink': 'drink.mp4',
+    
+    // Common nouns
+    'water': 'water.mp4',
+    'food': 'food.mp4',
+    'home': 'home.mp4',
+    'school': 'school.mp4',
+    'work': 'work.mp4',
+    'family': 'family.mp4',
+    'friend': 'friend.mp4',
+    
+    // Emotions
+    'happy': 'happy.mp4',
+    'sad': 'sad.mp4',
+    'love': 'love.mp4',
+    'like': 'like.mp4',
+    
+    // Numbers (1-10)
+    'one': 'numbers/one.mp4',
+    'two': 'numbers/two.mp4',
+    'three': 'numbers/three.mp4',
+    'four': 'numbers/four.mp4',
+    'five': 'numbers/five.mp4',
+    'six': 'numbers/six.mp4',
+    'seven': 'numbers/seven.mp4',
+    'eight': 'numbers/eight.mp4',
+    'nine': 'numbers/nine.mp4',
+    'ten': 'numbers/ten.mp4'
+  }
+};
+
+// Method to update dataset (for easy swapping)
+export const updateISLDataset = (newDataset: Partial<ISLVideoDataset>) => {
+  Object.assign(DEFAULT_ISL_DATASET, newDataset);
+};
+
+// Method to load dataset from external source
+export const loadDatasetFromAPI = async (apiUrl: string): Promise<void> => {
+  try {
+    const response = await fetch(apiUrl);
+    const dataset = await response.json();
+    updateISLDataset(dataset);
+  } catch (error) {
+    console.error('Failed to load dataset from API:', error);
   }
 };
 
@@ -248,13 +309,23 @@ export const ISLVideoPlayer = forwardRef<ISLVideoPlayerHandle, ISLVideoPlayerPro
       }
     }, [currentVideoIndex, isSequencePlaying]);
 
-    // Expose methods via ref
+    // Expose methods via ref with enhanced word processing
     useImperativeHandle(ref, () => ({
       async playSequence(glosses: string[]): Promise<void> {
-        const { available, missing } = findAvailableVideos(glosses);
+        // Process words using SpeechProcessor for consistency
+        const processedWords = glosses.flatMap(word => 
+          SpeechProcessor.processRecognizedText(word.toString())
+        );
+
+        // Validate which words have videos available
+        const { valid: availableWords, missing: missingWords } = SpeechProcessor.validateWordsForSigning(processedWords);
+        
+        // Convert to uppercase for video lookup
+        const upperAvailable = availableWords.map(w => w.toUpperCase());
+        const { available, missing } = findAvailableVideos(upperAvailable);
         
         setAvailableVideos(available);
-        setMissingWords(missing);
+        setMissingWords([...missing, ...missingWords]);
         setPlaybackQueue(available);
         setCurrentVideoIndex(0);
         
@@ -265,10 +336,11 @@ export const ISLVideoPlayer = forwardRef<ISLVideoPlayerHandle, ISLVideoPlayerPro
         
         setIsSequencePlaying(true);
         
-        if (missing.length > 0) {
+        const totalMissing = missing.length + missingWords.length;
+        if (totalMissing > 0) {
           toast({
-            title: `${missing.length} word(s) not found`,
-            description: `Videos not available: ${missing.join(', ')}`,
+            title: `${totalMissing} word(s) not found`,
+            description: `Videos not available: ${[...missing, ...missingWords].join(', ')}`,
             variant: "destructive"
           });
         }

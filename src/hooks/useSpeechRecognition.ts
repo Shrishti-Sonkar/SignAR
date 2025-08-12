@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { SpeechProcessor } from '@/utils/speechProcessor';
 
 interface SpeechRecognitionOptions {
   continuous?: boolean;
@@ -73,18 +74,25 @@ export const useSpeechRecognition = (
         }
       }
 
-      // Update transcript with debouncing for interim results
+      // Update transcript with enhanced processing for final results
       if (finalTranscript) {
-        setTranscript(prev => prev + finalTranscript);
+        // Process the speech text to handle merged words and cleanup
+        const processedWords = SpeechProcessor.processRecognizedText(finalTranscript);
+        const cleanedText = processedWords.join(' ');
+        
+        setTranscript(prev => {
+          const combined = prev + ' ' + cleanedText;
+          return combined.trim();
+        });
         setError(null);
       } else if (interimTranscript && options.interimResults) {
-        // Debounce interim results to avoid excessive updates
+        // For interim results, show the raw text but don't process yet
         if (debounceTimeoutRef.current) {
           clearTimeout(debounceTimeoutRef.current);
         }
         
         debounceTimeoutRef.current = setTimeout(() => {
-          setTranscript(prev => prev + interimTranscript);
+          setTranscript(prev => prev + ' ' + interimTranscript);
         }, 100);
       }
     };

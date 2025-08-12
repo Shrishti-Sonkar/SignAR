@@ -45,14 +45,19 @@ const SignLanguageFeature: React.FC<SignLanguageFeatureProps> = ({ className = "
     language: 'en-US'
   });
 
-  // Handle transcript updates with debouncing
+  // Handle transcript updates with enhanced processing
   useEffect(() => {
     if (transcript && transcript.trim().length > 0) {
-      handleTranscriptUpdate(transcript);
+      // Debounce transcript processing to avoid too many API calls
+      const timeoutId = setTimeout(() => {
+        handleTranscriptUpdate(transcript);
+      }, 1000);
+
+      return () => clearTimeout(timeoutId);
     }
   }, [transcript]);
 
-  // Process new transcript and convert to sign language
+  // Process new transcript and convert to sign language with enhanced processing
   const handleTranscriptUpdate = useCallback(async (text: string) => {
     try {
       // Get AI-enhanced translation
@@ -62,33 +67,43 @@ const SignLanguageFeature: React.FC<SignLanguageFeatureProps> = ({ className = "
       setCurrentText(text);
 
       toast({
-        title: "Translation Complete",
+        title: "Translation Complete", 
         description: `Converted "${text}" to ${glosses.length} sign(s)`,
       });
 
-      // Auto-play video sequence
+      // Auto-play video sequence with enhanced processing
       if (glosses.length > 0 && videoPlayerRef.current) {
         setIsVideoPlaying(true);
         await videoPlayerRef.current.playSequence(glosses);
       }
     } catch (error) {
-      // Fallback to simple word splitting
-      const words = text.split(' ').filter(word => word.trim().length > 0);
-      const glosses = words.map(word => word.toUpperCase());
-      
-      setCurrentGlosses(glosses);
-      setCurrentText(text);
+      // Enhanced fallback using speech processor
+      import('@/utils/speechProcessor').then(({ SpeechProcessor }) => {
+        const processedResult = SpeechProcessor.prepareForSigning(text);
+        const glosses = processedResult.availableWords.map(word => word.toUpperCase());
+        
+        setCurrentGlosses(glosses);
+        setCurrentText(text);
 
-      toast({
-        title: "Local Translation",
-        description: `Using offline dictionary for "${text}"`
+        if (processedResult.missingWords.length > 0) {
+          toast({
+            title: "Partial Translation",
+            description: `${processedResult.availableWords.length} words available, ${processedResult.missingWords.length} missing`,
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Local Translation",
+            description: `Using offline dictionary for "${text}"`
+          });
+        }
+
+        // Auto-play available video sequence
+        if (glosses.length > 0 && videoPlayerRef.current) {
+          setIsVideoPlaying(true);
+          videoPlayerRef.current.playSequence(glosses);
+        }
       });
-
-      // Auto-play video sequence
-      if (glosses.length > 0 && videoPlayerRef.current) {
-        setIsVideoPlaying(true);
-        await videoPlayerRef.current.playSequence(glosses);
-      }
     }
   }, [toast]);
 
