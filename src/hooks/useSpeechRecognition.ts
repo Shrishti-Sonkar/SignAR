@@ -76,9 +76,11 @@ export const useSpeechRecognition = (
 
       // Update transcript with enhanced processing for final results
       if (finalTranscript) {
+        console.log('🎤 Final transcript:', finalTranscript);
         // Process the speech text to handle merged words and cleanup
         const processedWords = SpeechProcessor.processRecognizedText(finalTranscript);
         const cleanedText = processedWords.join(' ');
+        console.log('🎤 Processed text:', cleanedText);
         
         setTranscript(prev => {
           const combined = prev + ' ' + cleanedText;
@@ -86,6 +88,7 @@ export const useSpeechRecognition = (
         });
         setError(null);
       } else if (interimTranscript && options.interimResults) {
+        console.log('🎤 Interim transcript:', interimTranscript);
         // For interim results, show the raw text but don't process yet
         if (debounceTimeoutRef.current) {
           clearTimeout(debounceTimeoutRef.current);
@@ -99,31 +102,38 @@ export const useSpeechRecognition = (
 
     // Handle recognition start
     recognition.onstart = () => {
+      console.log('🎤 Recognition started successfully');
       setIsListening(true);
       setError(null);
     };
 
     // Handle recognition end
     recognition.onend = () => {
+      console.log('🎤 Recognition ended');
       setIsListening(false);
     };
 
     // Handle recognition errors
     recognition.onerror = (event: any) => {
+      console.error('🎤 Recognition error:', event.error, event);
       setError(event.error);
       setIsListening(false);
       
       // Provide user-friendly error messages
       const errorMessages: Record<string, string> = {
         'network': 'Network error occurred. Please check your connection.',
-        'not-allowed': 'Microphone access denied. Please allow microphone permissions.',
+        'not-allowed': 'Microphone access denied. Please allow microphone permissions and try again.',
         'no-speech': 'No speech detected. Please try speaking again.',
         'audio-capture': 'Audio capture failed. Please check your microphone.',
         'aborted': 'Speech recognition was aborted.',
-        'service-not-allowed': 'Speech recognition service not allowed.'
+        'service-not-allowed': 'Speech recognition service not allowed.',
+        'bad-grammar': 'Grammar error in speech recognition.',
+        'language-not-supported': 'Language not supported by speech recognition.'
       };
       
-      setError(errorMessages[event.error] || `Speech recognition error: ${event.error}`);
+      const userFriendlyMessage = errorMessages[event.error] || `Speech recognition error: ${event.error}`;
+      console.error('🎤 User-friendly error:', userFriendlyMessage);
+      setError(userFriendlyMessage);
     };
 
     return recognition;
@@ -131,27 +141,53 @@ export const useSpeechRecognition = (
 
   // Start listening for speech
   const startListening = useCallback(() => {
+    console.log('🎤 startListening called');
+    console.log('🎤 isSupported:', isSupported);
+    console.log('🎤 isListening:', isListening);
+    console.log('🎤 window.location.protocol:', window.location.protocol);
+    
     if (!isSupported) {
-      setError('Speech recognition is not supported in this browser');
+      const errorMsg = 'Speech recognition is not supported in this browser';
+      console.error('🎤 Error:', errorMsg);
+      setError(errorMsg);
       return;
     }
 
-    if (isListening) return;
+    // Check if we're on HTTPS (required for speech recognition)
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+      const errorMsg = 'Speech recognition requires HTTPS connection';
+      console.error('🎤 Error:', errorMsg);
+      setError(errorMsg);
+      return;
+    }
+
+    if (isListening) {
+      console.log('🎤 Already listening, skipping');
+      return;
+    }
 
     try {
+      console.log('🎤 Initializing recognition...');
       recognitionRef.current = initializeRecognition();
       if (recognitionRef.current) {
+        console.log('🎤 Starting recognition...');
         recognitionRef.current.start();
+      } else {
+        throw new Error('Failed to initialize speech recognition');
       }
     } catch (err) {
-      setError('Failed to start speech recognition');
+      const errorMsg = `Failed to start speech recognition: ${err instanceof Error ? err.message : 'Unknown error'}`;
+      console.error('🎤 Error:', errorMsg, err);
+      setError(errorMsg);
       setIsListening(false);
     }
   }, [isSupported, isListening, initializeRecognition]);
 
   // Stop listening for speech
   const stopListening = useCallback(() => {
+    console.log('🎤 stopListening called');
     if (recognitionRef.current) {
+      console.log('🎤 Stopping recognition...');
       recognitionRef.current.stop();
       recognitionRef.current = null;
     }
@@ -160,6 +196,7 @@ export const useSpeechRecognition = (
 
   // Reset transcript
   const resetTranscript = useCallback(() => {
+    console.log('🎤 resetTranscript called');
     setTranscript('');
     setError(null);
   }, []);

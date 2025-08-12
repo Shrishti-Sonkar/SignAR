@@ -172,24 +172,33 @@ const SignLanguageFeature: React.FC<SignLanguageFeatureProps> = ({ className = "
 
       {/* Control Panel */}
       <Card className="p-6">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-lg font-semibold">Voice Control</h4>
-            {!speechSupported && (
-              <Alert className="flex-1 ml-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="text-sm">
-                  Speech recognition not supported in this browser
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-lg font-semibold">Voice Control</h4>
+              <div className="flex items-center gap-2">
+                <Badge variant={speechSupported ? "default" : "destructive"}>
+                  {speechSupported ? "Supported" : "Not Supported"}
+                </Badge>
+                {!speechSupported && (
+                  <Alert className="flex-1 ml-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      Speech recognition not supported in this browser. Try Chrome, Edge, or Safari.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            </div>
 
           {/* Microphone and Control Buttons */}
           <div className="flex gap-3 flex-wrap">
             <Button
               variant={isListening ? "destructive" : "default"}
-              onClick={toggleMicrophone}
+              onClick={() => {
+                console.log('🎤 Button clicked, isListening:', isListening);
+                console.log('🎤 speechSupported:', speechSupported);
+                toggleMicrophone();
+              }}
               disabled={!speechSupported}
               className="flex-1 sm:flex-none"
             >
