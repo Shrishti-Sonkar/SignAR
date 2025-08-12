@@ -9,6 +9,7 @@ import LearningStudio from '@/components/LearningStudio';
 import LearningResources from '@/components/LearningResources';
 import SettingsPanel from '@/components/SettingsPanel';
 import SignLanguageFeature from '@/components/SignLanguageFeature';
+import SignRecognition from '@/components/SignRecognition';
 import { 
   Sparkles, 
   Globe, 
@@ -91,22 +92,17 @@ const Index = () => {
         return <SignLanguageFeature />;
       case 'camera':
         return (
-          <div className="space-y-6">
-            {React.createElement(
-              React.lazy(() => import('@/components/SignRecognition')),
-              { 
-                onSignDetected: (sign: string, confidence: number) => {
-                  setCurrentText(`Detected: ${sign}`);
-                  setCurrentGlosses([sign.toUpperCase()]);
-                  setIsVideoPlaying(true);
-                  if (videoPlayerRef.current) {
-                    videoPlayerRef.current.playSequence([sign]);
-                  }
-                  setTimeout(() => setIsVideoPlaying(false), 3000);
-                }
+          <SignRecognition 
+            onSignDetected={(sign: string, confidence: number) => {
+              setCurrentText(`Detected: ${sign}`);
+              setCurrentGlosses([sign.toUpperCase()]);
+              setIsVideoPlaying(true);
+              if (videoPlayerRef.current) {
+                videoPlayerRef.current.playSequence([sign]);
               }
-            )}
-          </div>
+              setTimeout(() => setIsVideoPlaying(false), 3000);
+            }}
+          />
         );
       case 'ar':
         return (
