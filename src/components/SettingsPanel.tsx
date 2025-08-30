@@ -8,8 +8,7 @@ import { Label } from '@/components/ui/label';
 import { 
   Palette, 
   Volume2, 
-  Zap,
-  User,
+  Mic,
   Settings as SettingsIcon,
   Save,
   RotateCcw
@@ -24,36 +23,38 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onSettingsChange }) => {
   const { toast } = useToast();
   
   const [settings, setSettings] = useState({
-    // Avatar Appearance
-    avatarSkinTone: 2, // 0-4 range
-    avatarClothing: 'tracksuit', // tracksuit, formal, casual
-    avatarHairStyle: 'default',
+    // Speech Recognition Settings
+    speechLanguage: 'en-US', // en-US, hi-IN for ISL context
+    speechSensitivity: 0.7, // 0-1 range
+    continuousRecognition: false,
+    interimResults: true,
     
-    // Animation Settings
-    animationSpeed: 1.0, // 0.5-2.0 range
-    expressionIntensity: 0.8, // 0-1 range
-    smoothTransitions: true,
+    // Video Playback Settings
+    videoPlaybackSpeed: 1.0, // 0.5-2.0 range
+    autoPlaySequence: true,
+    preloadVideos: true,
+    showVideoProgress: true,
     
-    // Display Settings
+    // ISL Translation Settings
     showGlosses: true,
-    showTransliteration: false,
+    showWordHighlight: true,
+    splitLongSentences: true,
     darkMode: false,
-    reducedMotion: false,
     
     // Audio Settings
     enableSounds: true,
-    voiceFeedback: false,
-    volume: 0.7,
+    videoVolume: 0.8,
+    feedbackSounds: true,
     
-    // Learning Preferences
+    // Learning Mode
+    practiceMode: false,
+    showMissingWords: true,
     difficultyLevel: 'intermediate',
-    learningGoals: ['daily-conversation', 'academic'],
-    reminderFrequency: 'daily',
     
     // Accessibility
     highContrast: false,
     largeText: false,
-    keyboardNavigation: true
+    reducedMotion: false
   });
 
   const updateSetting = (key: string, value: any) => {
@@ -64,25 +65,27 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onSettingsChange }) => {
 
   const resetToDefaults = () => {
     const defaultSettings = {
-      avatarSkinTone: 2,
-      avatarClothing: 'tracksuit',
-      avatarHairStyle: 'default',
-      animationSpeed: 1.0,
-      expressionIntensity: 0.8,
-      smoothTransitions: true,
+      speechLanguage: 'en-US',
+      speechSensitivity: 0.7,
+      continuousRecognition: false,
+      interimResults: true,
+      videoPlaybackSpeed: 1.0,
+      autoPlaySequence: true,
+      preloadVideos: true,
+      showVideoProgress: true,
       showGlosses: true,
-      showTransliteration: false,
+      showWordHighlight: true,
+      splitLongSentences: true,
       darkMode: false,
-      reducedMotion: false,
       enableSounds: true,
-      voiceFeedback: false,
-      volume: 0.7,
+      videoVolume: 0.8,
+      feedbackSounds: true,
+      practiceMode: false,
+      showMissingWords: true,
       difficultyLevel: 'intermediate',
-      learningGoals: ['daily-conversation'],
-      reminderFrequency: 'daily',
       highContrast: false,
       largeText: false,
-      keyboardNavigation: true
+      reducedMotion: false
     };
     
     setSettings(defaultSettings);
@@ -95,8 +98,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onSettingsChange }) => {
   };
 
   const saveSettings = () => {
-    // In a real app, this would save to localStorage or backend
-    localStorage.setItem('signar_settings', JSON.stringify(settings));
+    // Save settings to localStorage
+    localStorage.setItem('isl_translator_settings', JSON.stringify(settings));
     
     toast({
       title: "Settings Saved",
@@ -127,74 +130,100 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onSettingsChange }) => {
             <SettingsIcon className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">SignAR Settings</h2>
-            <p className="text-sm text-muted-foreground">Customize your experience</p>
+            <h2 className="text-xl font-semibold">ISL Translator Settings</h2>
+            <p className="text-sm text-muted-foreground">Customize your translation experience</p>
           </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
-          {/* Avatar Customization */}
+          {/* Speech Recognition */}
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <User className="w-5 h-5" />
-                Avatar Appearance
+                <Mic className="w-5 h-5" />
+                Speech Recognition
               </h3>
               
-              {/* Skin Tone */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Skin Tone</Label>
-                <div className="flex gap-2">
-                  {skinToneOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => updateSetting('avatarSkinTone', option.value)}
-                      className={`w-8 h-8 rounded-full border-2 transition-all ${
-                        settings.avatarSkinTone === option.value 
-                          ? 'border-signar-blue scale-110' 
-                          : 'border-gray-300'
-                      }`}
-                      style={{ backgroundColor: option.color }}
-                      title={option.label}
-                    />
-                  ))}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="continuous-recognition" className="text-sm font-medium">
+                    Continuous Recognition
+                  </Label>
+                  <Switch
+                    id="continuous-recognition"
+                    checked={settings.continuousRecognition}
+                    onCheckedChange={(checked) => updateSetting('continuousRecognition', checked)}
+                  />
                 </div>
-              </div>
 
-              {/* Clothing */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Clothing Style</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {clothingOptions.map((option) => (
-                    <Button
-                      key={option.value}
-                      variant={settings.avatarClothing === option.value ? "signar" : "outline"}
-                      size="sm"
-                      onClick={() => updateSetting('avatarClothing', option.value)}
-                      className="h-12 text-xs"
-                    >
-                      <span className="mr-2">{option.preview}</span>
-                      {option.label}
-                    </Button>
-                  ))}
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="interim-results" className="text-sm font-medium">
+                    Show Interim Results
+                  </Label>
+                  <Switch
+                    id="interim-results"
+                    checked={settings.interimResults}
+                    onCheckedChange={(checked) => updateSetting('interimResults', checked)}
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium">Speech Sensitivity</Label>
+                  <div className="mt-2">
+                    <Slider
+                      value={[settings.speechSensitivity]}
+                      onValueChange={(value) => updateSetting('speechSensitivity', value[0])}
+                      min={0}
+                      max={1}
+                      step={0.1}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span>Low</span>
+                      <span>{Math.round(settings.speechSensitivity * 100)}%</span>
+                      <span>High</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Animation Settings */}
+            {/* Video Playback */}
             <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Zap className="w-5 h-5" />
-                Animation
+                <Volume2 className="w-5 h-5" />
+                Video Playback
               </h3>
               
               <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="auto-play" className="text-sm font-medium">
+                    Auto-play Sequences
+                  </Label>
+                  <Switch
+                    id="auto-play"
+                    checked={settings.autoPlaySequence}
+                    onCheckedChange={(checked) => updateSetting('autoPlaySequence', checked)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="preload-videos" className="text-sm font-medium">
+                    Preload Videos
+                  </Label>
+                  <Switch
+                    id="preload-videos"
+                    checked={settings.preloadVideos}
+                    onCheckedChange={(checked) => updateSetting('preloadVideos', checked)}
+                  />
+                </div>
+
                 <div>
-                  <Label className="text-sm font-medium">Animation Speed</Label>
+                  <Label className="text-sm font-medium">Playback Speed</Label>
                   <div className="mt-2">
                     <Slider
-                      value={[settings.animationSpeed]}
-                      onValueChange={(value) => updateSetting('animationSpeed', value[0])}
+                      value={[settings.videoPlaybackSpeed]}
+                      onValueChange={(value) => updateSetting('videoPlaybackSpeed', value[0])}
                       min={0.5}
                       max={2.0}
                       step={0.1}
@@ -202,40 +231,29 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onSettingsChange }) => {
                     />
                     <div className="flex justify-between text-xs text-muted-foreground mt-1">
                       <span>Slow</span>
-                      <span>{settings.animationSpeed.toFixed(1)}x</span>
+                      <span>{settings.videoPlaybackSpeed.toFixed(1)}x</span>
                       <span>Fast</span>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <Label className="text-sm font-medium">Expression Intensity</Label>
+                  <Label className="text-sm font-medium">Video Volume</Label>
                   <div className="mt-2">
                     <Slider
-                      value={[settings.expressionIntensity]}
-                      onValueChange={(value) => updateSetting('expressionIntensity', value[0])}
+                      value={[settings.videoVolume]}
+                      onValueChange={(value) => updateSetting('videoVolume', value[0])}
                       min={0}
                       max={1}
                       step={0.1}
                       className="w-full"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                      <span>Subtle</span>
-                      <span>{Math.round(settings.expressionIntensity * 100)}%</span>
-                      <span>Dramatic</span>
+                      <span>Quiet</span>
+                      <span>{Math.round(settings.videoVolume * 100)}%</span>
+                      <span>Loud</span>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="smooth-transitions" className="text-sm font-medium">
-                    Smooth Transitions
-                  </Label>
-                  <Switch
-                    id="smooth-transitions"
-                    checked={settings.smoothTransitions}
-                    onCheckedChange={(checked) => updateSetting('smoothTransitions', checked)}
-                  />
                 </div>
               </div>
             </div>
@@ -315,41 +333,53 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onSettingsChange }) => {
                   />
                 </div>
 
-                {settings.enableSounds && (
-                  <div>
-                    <Label className="text-sm font-medium">Volume</Label>
-                    <div className="mt-2">
-                      <Slider
-                        value={[settings.volume]}
-                        onValueChange={(value) => updateSetting('volume', value[0])}
-                        min={0}
-                        max={1}
-                        step={0.1}
-                        className="w-full"
-                      />
-                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>Quiet</span>
-                        <span>{Math.round(settings.volume * 100)}%</span>
-                        <span>Loud</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="feedback-sounds" className="text-sm font-medium">
+                    Feedback Sounds
+                  </Label>
+                  <Switch
+                    id="feedback-sounds"
+                    checked={settings.feedbackSounds}
+                    onCheckedChange={(checked) => updateSetting('feedbackSounds', checked)}
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Learning Preferences */}
+            {/* ISL Learning */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Learning Preferences</h3>
+              <h3 className="text-lg font-semibold mb-4">ISL Learning</h3>
               
               <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="practice-mode" className="text-sm font-medium">
+                    Practice Mode
+                  </Label>
+                  <Switch
+                    id="practice-mode"
+                    checked={settings.practiceMode}
+                    onCheckedChange={(checked) => updateSetting('practiceMode', checked)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="show-missing" className="text-sm font-medium">
+                    Show Missing Words
+                  </Label>
+                  <Switch
+                    id="show-missing"
+                    checked={settings.showMissingWords}
+                    onCheckedChange={(checked) => updateSetting('showMissingWords', checked)}
+                  />
+                </div>
+
                 <div>
                   <Label className="text-sm font-medium">Difficulty Level</Label>
                   <div className="grid grid-cols-3 gap-2 mt-2">
                     {['beginner', 'intermediate', 'advanced'].map((level) => (
                       <Button
                         key={level}
-                        variant={settings.difficultyLevel === level ? "signar" : "outline"}
+                        variant={settings.difficultyLevel === level ? "default" : "outline"}
                         size="sm"
                         onClick={() => updateSetting('difficultyLevel', level)}
                         className="capitalize"

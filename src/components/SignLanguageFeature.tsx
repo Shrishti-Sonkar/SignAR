@@ -132,13 +132,20 @@ const SignLanguageFeature: React.FC<SignLanguageFeatureProps> = ({ className = "
     }
   }, []);
 
-  // Toggle microphone
+  // Toggle microphone - fix double triggering
   const toggleMicrophone = useCallback(() => {
     if (isListening) {
+      console.log('🎤 Stopping microphone...');
       stopListening();
     } else {
+      console.log('🎤 Starting microphone...');
+      // Reset first, then start after a brief delay to prevent double triggering
       resetTranscript();
-      startListening();
+      setTimeout(() => {
+        if (!isListening) { // Check again to prevent race condition
+          startListening();
+        }
+      }, 100);
     }
   }, [isListening, startListening, stopListening, resetTranscript]);
 
