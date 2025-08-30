@@ -46,13 +46,16 @@ export class SpeechProcessor {
     // Step 4: Split into words and filter empty strings
     let words = processed.split(/\s+/).filter(word => word.length > 0);
 
-    // Step 5: Remove duplicate consecutive words
+    // Step 5: Extract final complete sentence from repeated patterns
+    words = this.extractFinalSentence(words);
+
+    // Step 6: Remove duplicate consecutive words (after sentence extraction)
     words = this.removeDuplicateWords(words);
 
-    // Step 6: Convert to lowercase for consistent matching
+    // Step 7: Convert to lowercase for consistent matching
     words = words.map(word => word.toLowerCase());
 
-    // Step 7: Filter out very short words (likely noise)
+    // Step 8: Filter out very short words (likely noise)
     words = words.filter(word => word.length > 1);
 
     return words;
@@ -141,6 +144,98 @@ export class SpeechProcessor {
     }
 
     return result;
+  }
+
+  /**
+   * Extract the final complete sentence from repeated pattern recognition
+   * Example: "hello hello my name is hello my name is hello my name is Srishti"
+   * Should become: "hello my name is Srishti"
+   */
+  private static extractFinalSentence(words: string[]): string[] {
+    if (words.length <= 3) return words;
+
+    // Try to find the longest complete sentence pattern
+    const possibleSentences = this.findRepeatedPatterns(words);
+    
+    if (possibleSentences.length > 0) {
+      // Return the longest/most complete sentence
+      const bestSentence = possibleSentences.reduce((longest, current) => 
+        current.length > longest.length ? current : longest
+      );
+      return bestSentence;
+    }
+
+    return words;
+  }
+
+  /**
+   * Find repeated sentence patterns in the word array
+   */
+  private static findRepeatedPatterns(words: string[]): string[][] {
+    const patterns: string[][] = [];
+    
+    // Look for the final complete sentence by finding the last occurrence of sentence starters
+    const sentenceStarters = ['HELLO', 'HI', 'GOOD', 'MY', 'I', 'WE', 'YOU'];
+    const lastStarterIndex = this.findLastOccurrenceOfAny(words, sentenceStarters);
+    
+    if (lastStarterIndex !== -1) {
+      // Extract everything from the last sentence starter to the end
+      const finalSentence = words.slice(lastStarterIndex);
+      patterns.push(finalSentence);
+    }
+
+    // Also try to find the most complete version by looking for the longest substring
+    // that appears to be a complete thought
+    const completeSentence = this.findMostCompleteSentence(words);
+    if (completeSentence.length > 0) {
+      patterns.push(completeSentence);
+    }
+
+    return patterns;
+  }
+
+  /**
+   * Find the last occurrence of any word in the given list
+   */
+  private static findLastOccurrenceOfAny(words: string[], targets: string[]): number {
+    for (let i = words.length - 1; i >= 0; i--) {
+      if (targets.includes(words[i])) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Find the most complete sentence by analyzing word patterns
+   */
+  private static findMostCompleteSentence(words: string[]): string[] {
+    // Look for patterns that indicate a complete sentence
+    // For "hello my name is X", we want to capture the final complete version
+    
+    const namePatternIndex = this.findLastNamePattern(words);
+    if (namePatternIndex !== -1) {
+      // Found "my name is" pattern, extract complete sentence including it
+      const sentenceStart = Math.max(0, namePatternIndex - 2); // Include greeting
+      return words.slice(sentenceStart);
+    }
+
+    // If no specific pattern found, return the last quarter of words
+    // This helps catch the final attempt at speech recognition
+    const quarterPoint = Math.max(0, Math.floor(words.length * 0.75));
+    return words.slice(quarterPoint);
+  }
+
+  /**
+   * Find the last occurrence of "my name is" pattern
+   */
+  private static findLastNamePattern(words: string[]): number {
+    for (let i = words.length - 3; i >= 0; i--) {
+      if (words[i] === 'MY' && words[i + 1] === 'NAME' && words[i + 2] === 'IS') {
+        return i;
+      }
+    }
+    return -1;
   }
 
   /**
