@@ -77,7 +77,15 @@ const Index = () => {
           />
         );
       case 'learn':
-        return <LearningStudio onStartLesson={handleStartLesson} />;
+        return <LearningStudio onStartLesson={handleStartLesson} onSignPlay={(sign) => {
+          setCurrentText(`Learning: ${sign}`);
+          setCurrentGlosses([sign]);
+          setIsVideoPlaying(true);
+          if (videoPlayerRef.current) {
+            videoPlayerRef.current.playSequence([sign]);
+          }
+          setTimeout(() => setIsVideoPlaying(false), 3000);
+        }} />;
       case 'resources':
         return <LearningResources onSelectResource={(resource) => {
           setCurrentText(`Learning: ${resource.title}`);

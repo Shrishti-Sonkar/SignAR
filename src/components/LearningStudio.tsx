@@ -13,19 +13,23 @@ import {
   PlayCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import LessonPlayer from './LessonPlayer';
 
 interface LearningStudioProps {
   onStartLesson: (lessonId: string) => void;
+  onSignPlay?: (sign: string) => void;
 }
 
-const LearningStudio: React.FC<LearningStudioProps> = ({ onStartLesson }) => {
+const LearningStudio: React.FC<LearningStudioProps> = ({ onStartLesson, onSignPlay }) => {
   const { toast } = useToast();
+  const [activeLesson, setActiveLesson] = useState<string | null>(null);
   const [userProgress, setUserProgress] = useState({
     totalLessons: 24,
     completedLessons: 8,
     currentStreak: 5,
     totalPoints: 1250
   });
+  const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set(['basics-1', 'basics-2']));
 
   const lessons = [
     {
@@ -35,7 +39,7 @@ const LearningStudio: React.FC<LearningStudioProps> = ({ onStartLesson }) => {
       difficulty: 'Beginner',
       duration: '15 min',
       signs: ['HELLO', 'GOODBYE', 'THANK-YOU', 'PLEASE'],
-      completed: true,
+      completed: completedLessons.has('basics-1'),
       locked: false
     },
     {
@@ -44,8 +48,8 @@ const LearningStudio: React.FC<LearningStudioProps> = ({ onStartLesson }) => {
       description: 'Practice counting from 1 to 10 in ISL',
       difficulty: 'Beginner',
       duration: '20 min',
-      signs: ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE'],
-      completed: true,
+      signs: ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN'],
+      completed: completedLessons.has('basics-2'),
       locked: false
     },
     {
@@ -54,9 +58,9 @@ const LearningStudio: React.FC<LearningStudioProps> = ({ onStartLesson }) => {
       description: 'Signs for mother, father, sister, brother',
       difficulty: 'Beginner',
       duration: '25 min',
-      signs: ['MOTHER', 'FATHER', 'SISTER', 'BROTHER'],
-      completed: false,
-      locked: false
+      signs: ['MOTHER', 'FATHER', 'SISTER', 'BROTHER', 'FAMILY'],
+      completed: completedLessons.has('family'),
+      locked: !completedLessons.has('basics-1')
     },
     {
       id: 'emotions',
@@ -64,9 +68,9 @@ const LearningStudio: React.FC<LearningStudioProps> = ({ onStartLesson }) => {
       description: 'Express happiness, sadness, anger, fear',
       difficulty: 'Intermediate',
       duration: '30 min',
-      signs: ['HAPPY', 'SAD', 'ANGRY', 'SCARED'],
-      completed: false,
-      locked: false
+      signs: ['HAPPY', 'SAD', 'ANGRY', 'SCARED', 'EXCITED', 'CALM'],
+      completed: completedLessons.has('emotions'),
+      locked: !completedLessons.has('family')
     },
     {
       id: 'daily-activities',
@@ -74,9 +78,9 @@ const LearningStudio: React.FC<LearningStudioProps> = ({ onStartLesson }) => {
       description: 'Eat, drink, sleep, work, study',
       difficulty: 'Intermediate',
       duration: '35 min',
-      signs: ['EAT', 'DRINK', 'SLEEP', 'WORK'],
-      completed: false,
-      locked: true
+      signs: ['EAT', 'DRINK', 'SLEEP', 'WORK', 'STUDY', 'PLAY'],
+      completed: completedLessons.has('daily-activities'),
+      locked: !completedLessons.has('emotions')
     },
     {
       id: 'conversation',
@@ -84,9 +88,9 @@ const LearningStudio: React.FC<LearningStudioProps> = ({ onStartLesson }) => {
       description: 'Put it all together in simple conversations',
       difficulty: 'Advanced',
       duration: '45 min',
-      signs: ['CONVERSATION', 'QUESTION', 'ANSWER'],
-      completed: false,
-      locked: true
+      signs: ['HOW', 'ARE', 'YOU', 'FINE', 'THANKS', 'NICE', 'MEET'],
+      completed: completedLessons.has('conversation'),
+      locked: !completedLessons.has('daily-activities')
     }
   ];
 
@@ -124,11 +128,29 @@ const LearningStudio: React.FC<LearningStudioProps> = ({ onStartLesson }) => {
       return;
     }
 
+    setActiveLesson(lesson.id);
     onStartLesson(lesson.id);
+  };
+
+  const handleLessonComplete = (lessonId: string, score: number) => {
+    setCompletedLessons(prev => new Set([...prev, lessonId]));
+    setUserProgress(prev => ({
+      ...prev,
+      completedLessons: prev.completedLessons + 1,
+      totalPoints: prev.totalPoints + Math.round(score * 2),
+      currentStreak: prev.currentStreak + 1
+    }));
+    
+    setActiveLesson(null);
+    
     toast({
-      title: "Lesson Started",
-      description: `Starting "${lesson.title}" - ${lesson.duration}`,
+      title: "Lesson Completed! 🎉",
+      description: `You earned ${Math.round(score * 2)} XP! Score: ${score}%`,
     });
+  };
+
+  const handleBackToLessons = () => {
+    setActiveLesson(null);
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -140,7 +162,22 @@ const LearningStudio: React.FC<LearningStudioProps> = ({ onStartLesson }) => {
     }
   };
 
-  const progressPercentage = (userProgress.completedLessons / userProgress.totalLessons) * 100;
+  const progressPercentage = (completedLessons.size / userProgress.totalLessons) * 100;
+
+  // If a lesson is active, show the lesson player
+  if (activeLesson) {
+    const lesson = lessons.find(l => l.id === activeLesson);
+    if (lesson) {
+      return (
+        <LessonPlayer
+          lesson={lesson}
+          onComplete={handleLessonComplete}
+          onBack={handleBackToLessons}
+          onSignPlay={onSignPlay || (() => {})}
+        />
+      );
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -159,7 +196,7 @@ const LearningStudio: React.FC<LearningStudioProps> = ({ onStartLesson }) => {
         
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="text-center">
-            <div className="text-2xl font-bold">{userProgress.completedLessons}</div>
+            <div className="text-2xl font-bold">{completedLessons.size}</div>
             <div className="text-sm text-white/80">Lessons Completed</div>
           </div>
           <div className="text-center">
