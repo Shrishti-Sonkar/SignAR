@@ -15,16 +15,10 @@ import {
   Trophy
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { type LearningLesson } from '@/services/youtubeLearningService';
 
 interface LessonPlayerProps {
-  lesson: {
-    id: string;
-    title: string;
-    description: string;
-    difficulty: string;
-    duration: string;
-    signs: string[];
-  };
+  lesson: LearningLesson;
   onComplete: (lessonId: string, score: number) => void;
   onBack: () => void;
   onSignPlay: (sign: string) => void;

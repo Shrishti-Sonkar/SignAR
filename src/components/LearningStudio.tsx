@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,10 +10,14 @@ import {
   Clock,
   Star,
   CheckCircle2,
-  PlayCircle
+  PlayCircle,
+  Video,
+  Youtube,
+  Loader2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import LessonPlayer from './LessonPlayer';
+import { youtubeLearningService, type LearningLesson } from '@/services/youtubeLearningService';
 
 interface LearningStudioProps {
   onStartLesson: (lessonId: string) => void;
@@ -23,76 +27,67 @@ interface LearningStudioProps {
 const LearningStudio: React.FC<LearningStudioProps> = ({ onStartLesson, onSignPlay }) => {
   const { toast } = useToast();
   const [activeLesson, setActiveLesson] = useState<string | null>(null);
+  const [lessons, setLessons] = useState<LearningLesson[]>([]);
+  const [loading, setLoading] = useState(true);
   const [userProgress, setUserProgress] = useState({
     totalLessons: 24,
     completedLessons: 8,
     currentStreak: 5,
     totalPoints: 1250
   });
-  const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set(['basics-1', 'basics-2']));
+  const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set(['basics-greetings']));
 
-  const lessons = [
-    {
-      id: 'basics-1',
-      title: 'Basic Greetings',
-      description: 'Learn hello, goodbye, thank you, and please',
-      difficulty: 'Beginner',
-      duration: '15 min',
-      signs: ['HELLO', 'GOODBYE', 'THANK-YOU', 'PLEASE'],
-      completed: completedLessons.has('basics-1'),
-      locked: false
-    },
-    {
-      id: 'basics-2',
-      title: 'Numbers 1-10',
-      description: 'Practice counting from 1 to 10 in ISL',
-      difficulty: 'Beginner',
-      duration: '20 min',
-      signs: ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN'],
-      completed: completedLessons.has('basics-2'),
-      locked: false
-    },
-    {
-      id: 'family',
-      title: 'Family Members',
-      description: 'Signs for mother, father, sister, brother',
-      difficulty: 'Beginner',
-      duration: '25 min',
-      signs: ['MOTHER', 'FATHER', 'SISTER', 'BROTHER', 'FAMILY'],
-      completed: completedLessons.has('family'),
-      locked: !completedLessons.has('basics-1')
-    },
-    {
-      id: 'emotions',
-      title: 'Emotions & Feelings',
-      description: 'Express happiness, sadness, anger, fear',
-      difficulty: 'Intermediate',
-      duration: '30 min',
-      signs: ['HAPPY', 'SAD', 'ANGRY', 'SCARED', 'EXCITED', 'CALM'],
-      completed: completedLessons.has('emotions'),
-      locked: !completedLessons.has('family')
-    },
-    {
-      id: 'daily-activities',
-      title: 'Daily Activities',
-      description: 'Eat, drink, sleep, work, study',
-      difficulty: 'Intermediate',
-      duration: '35 min',
-      signs: ['EAT', 'DRINK', 'SLEEP', 'WORK', 'STUDY', 'PLAY'],
-      completed: completedLessons.has('daily-activities'),
-      locked: !completedLessons.has('emotions')
-    },
-    {
-      id: 'conversation',
-      title: 'Basic Conversation',
-      description: 'Put it all together in simple conversations',
-      difficulty: 'Advanced',
-      duration: '45 min',
-      signs: ['HOW', 'ARE', 'YOU', 'FINE', 'THANKS', 'NICE', 'MEET'],
-      completed: completedLessons.has('conversation'),
-      locked: !completedLessons.has('daily-activities')
+  // Load learning lessons from YouTube service
+  useEffect(() => {
+    const loadLessons = async () => {
+      try {
+        setLoading(true);
+        const learningLessons = await youtubeLearningService.getLearningLessons();
+        setLessons(learningLessons);
+        setUserProgress(prev => ({
+          ...prev,
+          totalLessons: learningLessons.length
+        }));
+      } catch (error) {
+        console.error('Error loading lessons:', error);
+        toast({
+          title: "Error Loading Lessons",
+          description: "Failed to load learning content. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadLessons();
+  }, [toast]);
+
+  const handleStartLesson = async (lesson: LearningLesson) => {
+    // Check if lesson is locked based on order and completed lessons
+    const previousLessons = lessons.filter(l => l.order < lesson.order);
+    const allPreviousCompleted = previousLessons.every(l => completedLessons.has(l.id));
+    
+    if (!allPreviousCompleted && lesson.order > 1) {
+      toast({
+        title: "Lesson Locked",
+        description: "Complete previous lessons to unlock this one",
+        variant: "destructive"
+      });
+      return;
     }
-  ];
+
+    try {
+      // Enrich lesson with YouTube videos if available
+      const enrichedLesson = await youtubeLearningService.enrichLessonWithYouTubeVideos(lesson);
+      setActiveLesson(enrichedLesson.id);
+      onStartLesson(enrichedLesson.id);
+    } catch (error) {
+      console.error('Error starting lesson:', error);
+      setActiveLesson(lesson.id);
+      onStartLesson(lesson.id);
+    }
+  };
 
   const challenges = [
     {
@@ -117,20 +112,6 @@ const LearningStudio: React.FC<LearningStudioProps> = ({ onStartLesson, onSignPl
       completed: false
     }
   ];
-
-  const handleStartLesson = (lesson: any) => {
-    if (lesson.locked) {
-      toast({
-        title: "Lesson Locked",
-        description: "Complete previous lessons to unlock this one",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setActiveLesson(lesson.id);
-    onStartLesson(lesson.id);
-  };
 
   const handleLessonComplete = (lessonId: string, score: number) => {
     setCompletedLessons(prev => new Set([...prev, lessonId]));
@@ -179,6 +160,18 @@ const LearningStudio: React.FC<LearningStudioProps> = ({ onStartLesson, onSignPl
     }
   }
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Card className="p-6 text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Loading Learning Content</h3>
+          <p className="text-muted-foreground">Fetching ISL lessons and videos...</p>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Progress Overview */}
@@ -221,19 +214,30 @@ const LearningStudio: React.FC<LearningStudioProps> = ({ onStartLesson, onSignPl
           </div>
           
           <div className="grid gap-4">
-            {lessons.map((lesson) => (
+            {lessons.map((lesson) => {
+              const isCompleted = completedLessons.has(lesson.id);
+              const previousLessons = lessons.filter(l => l.order < lesson.order);
+              const isLocked = lesson.order > 1 && !previousLessons.every(l => completedLessons.has(l.id));
+              
+              return (
               <Card 
                 key={lesson.id} 
                 className={`p-4 transition-all hover:shadow-md ${
-                  lesson.locked ? 'opacity-60' : 'hover:scale-[1.02]'
+                  isLocked ? 'opacity-60' : 'hover:scale-[1.02]'
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <h4 className="font-semibold text-foreground">{lesson.title}</h4>
-                      {lesson.completed && (
+                      {isCompleted && (
                         <CheckCircle2 className="w-4 h-4 text-signar-success" />
+                      )}
+                      {lesson.videos.length > 0 && (
+                        <Badge variant="secondary" className="flex items-center gap-1">
+                          <Youtube className="w-3 h-3" />
+                          {lesson.videos.length}
+                        </Badge>
                       )}
                     </div>
                     
@@ -264,18 +268,19 @@ const LearningStudio: React.FC<LearningStudioProps> = ({ onStartLesson, onSignPl
                   </div>
                   
                   <Button
-                    variant={lesson.completed ? "secondary" : "signar"}
+                    variant={isCompleted ? "secondary" : "signar"}
                     size="sm"
                     onClick={() => handleStartLesson(lesson)}
-                    disabled={lesson.locked}
+                    disabled={isLocked}
                     className="ml-4"
                   >
                     <PlayCircle className="w-4 h-4 mr-1" />
-                    {lesson.completed ? 'Review' : 'Start'}
+                    {isCompleted ? 'Review' : 'Start'}
                   </Button>
                 </div>
               </Card>
-            ))}
+            );
+            })}
           </div>
         </div>
 
