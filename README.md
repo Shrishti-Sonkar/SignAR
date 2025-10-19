@@ -1,4 +1,4 @@
-SignAR – AI Powered Indian Sign Language Translation Platform
+**SignAR – AI Powered Indian Sign Language Translation Platform**
 By Team Technovators (Excalibur)
 
 An AI-powered web platform that converts text or speech into sequential Indian Sign Language (ISL) videos, making digital communication inclusive for the deaf and mute community.
