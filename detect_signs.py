@@ -3,7 +3,6 @@ import cv2
 import numpy as np
 import pyttsx3
 from tensorflow.keras.models import load_model
-
 # ✅ Suppress TensorFlow warnings & logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -95,3 +94,4 @@ while True:
 # ✅ Release resources
 cap.release()
 cv2.destroyAllWindows()
+
