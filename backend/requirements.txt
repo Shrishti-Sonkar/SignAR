@@ -1,0 +1,11 @@
+flask
+flask-cors
+tensorflow
+numpy
+opencv-python-headless
+gTTS
+python-dotenv
+requests
+mediapipe==0.10.21  # newer versions dropped the legacy 'solutions' (Holistic) API
+protobuf==5.28.3    # TF needs >=5.27; mediapipe's pin (<5) is safe to override
+scikit-learn
